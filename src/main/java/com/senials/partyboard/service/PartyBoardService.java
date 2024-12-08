@@ -6,6 +6,8 @@ import com.senials.favorites.entity.Favorites;
 import com.senials.favorites.repository.FavoritesRepository;
 import com.senials.hobbyboard.entity.Hobby;
 import com.senials.hobbyboard.repository.HobbyRepository;
+import com.senials.likes.repository.LikeRepository;
+import com.senials.partyboard.dto.PartyBoardDTOForCard;
 import com.senials.partyboard.dto.PartyBoardDTOForDetail;
 import com.senials.partyboard.dto.PartyBoardDTOForModify;
 import com.senials.partyboard.dto.PartyBoardDTOForWrite;
@@ -13,9 +15,9 @@ import com.senials.partyboard.entity.PartyBoard;
 import com.senials.partyboard.repository.PartyBoardRepository;
 import com.senials.partyboard.repository.PartyBoardSpecification;
 import com.senials.partyboardimage.entity.PartyBoardImage;
-import com.senials.partymember.entity.PartyMember;
+import com.senials.partyboardimage.repository.PartyBoardImageRepository;
 import com.senials.partymember.repository.PartyMemberRepository;
-import com.senials.user.dto.UserDTOForPublic;
+import com.senials.partyreview.repository.PartyReviewRepository;
 import com.senials.user.entity.User;
 import com.senials.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,7 @@ import java.io.File;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PartyBoardService {
@@ -47,33 +50,78 @@ public class PartyBoardService {
 
     private final FavoritesRepository favoritesRepository;
 
+    private final PartyMemberRepository partyMemberRepository;
+
+    private final PartyReviewRepository partyReviewRepository;
+
+    private final LikeRepository likeRepository;
+
 
     @Autowired
     public PartyBoardService(
             PartyBoardMapperImpl partyBoardMapperImpl
             , PartyBoardRepository partyBoardRepository
             , UserRepository userRepository
-            , HobbyRepository hobbyRepository,
-            FavoritesRepository favoritesRepository, PartyMemberRepository partyMemberRepository)
+            , HobbyRepository hobbyRepository
+            , FavoritesRepository favoritesRepository
+            , PartyMemberRepository partyMemberRepository
+            , PartyReviewRepository partyReviewRepository
+            , LikeRepository likeRepository
+    )
     {
         this.partyBoardMapper = partyBoardMapperImpl;
         this.partyBoardRepository = partyBoardRepository;
         this.userRepository = userRepository;
         this.hobbyRepository = hobbyRepository;
         this.favoritesRepository = favoritesRepository;
+        this.partyMemberRepository = partyMemberRepository;
+        this.partyReviewRepository = partyReviewRepository;
+        this.likeRepository = likeRepository;
+    }
+
+    /* 인기 추천 모임 (평점 높은 순, 리뷰 개수 N개 이상, 모집중 >> M개 제한)*/
+    public List<PartyBoardDTOForCard> getPopularPartyBoards(int minReviewCount, int size, int pageNumber) {
+
+        Page<PartyBoard> partyBoardList = partyBoardRepository.findPopularPartyBoards(minReviewCount, PageRequest.of(pageNumber, size));
+
+        List<PartyBoardDTOForCard> partyBoardDTOForCardList = partyBoardList.stream().map(partyBoard -> {
+
+            int partyMemberCnt = partyMemberRepository.countAllByPartyBoard(partyBoard);
+            int partyReviewCnt = partyReviewRepository.countAllByPartyBoard(partyBoard);
+            double partyAvgRate = partyReviewRepository.findAvgRateByPartyBoard(partyBoard);
+
+            String partyImageThumbnail = null;
+            List<PartyBoardImage> partyBoardImageList = partyBoard.getImages();
+            if (partyBoardImageList != null && !partyBoardImageList.isEmpty()) {
+                partyImageThumbnail = partyBoardImageList.get(0).getPartyBoardImg();
+            }
+
+            PartyBoardDTOForCard partyBoardCard = partyBoardMapper.toPartyBoardDTOForCard(partyBoard);
+            partyBoardCard.setMemberCount(partyMemberCnt);
+            partyBoardCard.setReviewCount(partyReviewCnt);
+            partyBoardCard.setAverageRating(partyAvgRate);
+            partyBoardCard.setFirstImage(partyImageThumbnail);
+
+            return partyBoardCard;
+
+        }).toList();
+
+        return partyBoardDTOForCardList;
     }
 
 
     /* 모임 검색 및 정렬 */
-    public List<PartyBoardDTOForDetail> searchPartyBoard(String sortMethod, String keyword, Integer cursor, int size, boolean isLikedOnly) {
+    public List<PartyBoardDTOForCard> searchPartyBoard(String sortMethod, String keyword, Integer cursor, int size, boolean isLikedOnly, Integer userNumber) {
 
         Sort.Order numberAsc = Sort.Order.asc("partyBoardNumber");
         Sort.Order numberDesc = Sort.Order.desc("partyBoardNumber");
+
 
         String sortColumn = null;
         Pageable pageable = null;
         boolean isAscending = false;
         boolean isIntegerSort = true;
+
 
         switch (sortMethod) {
             /* 최신순 */
@@ -109,13 +157,18 @@ public class PartyBoardService {
             default:
         }
 
+        /* 유저 number 필요 */
+        User user;
+        if(userNumber != null) {
+            user = userRepository.findById(userNumber).orElseThrow(IllegalArgumentException::new);
+        } else {
+            user = null;
+        }
 
         /* 관심사 기반 추천 확인 */
         // 관심사 기반 추천 시 최소 빈 리스트 / 미추천 시 null
         List<Hobby> hobbyList = null;
-        if(isLikedOnly) {
-            /* 유저 number 필요 */ int userNumber = 3;
-            User user = userRepository.findById(userNumber).orElseThrow(IllegalArgumentException::new);
+        if(isLikedOnly && user != null) {
             List<Favorites> favoritesList = favoritesRepository.findAllByUser(user);
 
             /* 관심사 존재하는지 체크 */
@@ -126,30 +179,50 @@ public class PartyBoardService {
             }
         }
 
-        /* 첫 페이지 로딩 OR 정렬 변경 직후 */
+
         Page<PartyBoard> partyBoardList = null;
-        if(cursor == null) {
-            if(hobbyList == null) {
-                partyBoardList = partyBoardRepository.findAll(pageable);
-            } else {
-                partyBoardList = partyBoardRepository.findAllByHobbyIn(hobbyList, pageable);
-            }
-
-            /* 더보기 버튼으로 로드 */
+        /* Specification 쿼리문 실행 */
+        Specification<PartyBoard> spec = null;
+        if(isIntegerSort) {
+            spec = PartyBoardSpecification.searchLoadInteger(sortColumn, keyword, cursor, isAscending, hobbyList);
         } else {
-            Specification<PartyBoard> spec = null;
-
-            if(isIntegerSort) {
-                spec = PartyBoardSpecification.searchLoadInteger(sortColumn, keyword, cursor, isAscending, hobbyList);
-            } else {
-                spec = PartyBoardSpecification.searchLoadLocalDate(sortColumn, keyword, cursor, isAscending, hobbyList);
-            }
-
-            partyBoardList = partyBoardRepository.findAll(spec, pageable);
-
+            spec = PartyBoardSpecification.searchLoadLocalDate(sortColumn, keyword, cursor, isAscending, hobbyList);
         }
+        partyBoardList = partyBoardRepository.findAll(spec, pageable);
 
-        return partyBoardList.map(partyBoardMapper::toPartyBoardDTOForDetail).toList();
+
+        // if(!sortMethod.equals("mostRated")) {
+        //
+        // } else {
+        //     partyBoardList = partyBoardRepository.findPopularPartyBoards();
+        // }
+
+
+        List<PartyBoardDTOForCard> partyBoardDTOForCardList = partyBoardList.stream()
+                .map(partyBoard -> {
+                    PartyBoardDTOForCard partyBoardCard = partyBoardMapper.toPartyBoardDTOForCard(partyBoard);
+
+                    int partyMemberCnt = partyMemberRepository.countAllByPartyBoard(partyBoard);
+                    int partyReviewCnt = partyReviewRepository.countAllByPartyBoard(partyBoard);
+                    double partyAvgRate = partyReviewRepository.findAvgRateByPartyBoard(partyBoard);
+                    boolean isLiked = user != null && likeRepository.existsByUserAndPartyBoard(user, partyBoard);
+
+                    String partyImageThumbnail = null;
+                    List<PartyBoardImage> partyBoardImageList = partyBoard.getImages();
+                    if (partyBoardImageList != null && !partyBoardImageList.isEmpty()) {
+                        partyImageThumbnail = partyBoardImageList.get(0).getPartyBoardImg();
+                    }
+
+                    partyBoardCard.setMemberCount(partyMemberCnt);
+                    partyBoardCard.setReviewCount(partyReviewCnt);
+                    partyBoardCard.setAverageRating(partyAvgRate);
+                    partyBoardCard.setFirstImage(partyImageThumbnail);
+                    partyBoardCard.setLiked(isLiked);
+
+                    return partyBoardCard;
+                }).collect(Collectors.toList());
+
+        return partyBoardDTOForCardList;
     }
 
 

@@ -34,37 +34,41 @@ public class PartyBoardSpecification {
     public static Specification<PartyBoard> searchLoadLocalDate (String sortColumn, String keyword, Integer cursor, boolean isAscending, List<Hobby> hobbyList) {
         return (root, query, criteriaBuilder) -> {
 
-            /* 서브쿼리 세팅 */
-            // 서브쿼리 생성 및 반환 컬럼 자료형 지정
-            Subquery<LocalDate> subquery = query.subquery(LocalDate.class);
-
-            // 서브쿼리 FROM절 - FROM PartyBoard 엔티티
-            Root<PartyBoard> subqueryRoot = subquery.from(PartyBoard.class);
-
-            // SELECT :sortColumn FROM PARTY_BOARD WHERE party_board_number = cursor
-            subquery.select(subqueryRoot.get(sortColumn))
-                    .where(criteriaBuilder.equal(subqueryRoot.get("partyBoardNumber"), cursor));
-
-
-            // 조건 1: party_board_open_date </> (서브쿼리 결과)
             Predicate condition1 = null;
-            if (isAscending) {
-                condition1 = criteriaBuilder.greaterThan(root.get(sortColumn), subquery);
-            } else {
-                condition1 = criteriaBuilder.lessThan(root.get(sortColumn), subquery);
-            }
-
-
-            // 조건 2: party_board_open_date = (서브쿼리 결과) AND party_board_number </> cursor
             Predicate condition2 = null;
-            Predicate temp1 = criteriaBuilder.equal(root.get(sortColumn), subquery);
-            Predicate temp2 = null;
-            if(isAscending) {
-                temp2 = criteriaBuilder.greaterThan(root.get("partyBoardNumber"), cursor);
-            } else {
-                temp2 = criteriaBuilder.lessThan(root.get("partyBoardNumber"), cursor);
+            if (cursor != null) {
+
+                /* 서브쿼리 세팅 */
+                // 서브쿼리 생성 및 반환 컬럼 자료형 지정
+                Subquery<LocalDate> subquery = query.subquery(LocalDate.class);
+
+                // 서브쿼리 FROM절 - FROM PartyBoard 엔티티
+                Root<PartyBoard> subqueryRoot = subquery.from(PartyBoard.class);
+
+                // SELECT :sortColumn FROM PARTY_BOARD WHERE party_board_number = cursor
+                subquery.select(subqueryRoot.get(sortColumn))
+                        .where(criteriaBuilder.equal(subqueryRoot.get("partyBoardNumber"), cursor));
+
+
+                // 조건 1; condition1: party_board_open_date </> (서브쿼리 결과)
+                if (isAscending) {
+                    condition1 = criteriaBuilder.greaterThan(root.get(sortColumn), subquery);
+                } else {
+                    condition1 = criteriaBuilder.lessThan(root.get(sortColumn), subquery);
+                }
+
+
+                // 조건 2; condition2: party_board_open_date = (서브쿼리 결과) AND party_board_number </> cursor
+                Predicate temp1 = criteriaBuilder.equal(root.get(sortColumn), subquery);
+                Predicate temp2 = null;
+                if(isAscending) {
+                    temp2 = criteriaBuilder.greaterThan(root.get("partyBoardNumber"), cursor);
+                } else {
+                    temp2 = criteriaBuilder.lessThan(root.get("partyBoardNumber"), cursor);
+                }
+                condition2 = criteriaBuilder.and(temp1, temp2);
+
             }
-            condition2 = criteriaBuilder.and(temp1, temp2);
 
 
             /* 검색어 있을 때 */
@@ -82,11 +86,15 @@ public class PartyBoardSpecification {
             }
 
             // 최종 조건 조합: (조건 1 OR 조건 2) AND 조건 3 AND 조건 4
-            return criteriaBuilder.and(
-                    criteriaBuilder.or(condition1, condition2)
-                    , condition3
-                    , condition4
-            );
+            if(cursor != null) {
+                return criteriaBuilder.and(
+                        criteriaBuilder.or(condition1, condition2)
+                        , condition3
+                        , condition4
+                );
+            } else {
+                return criteriaBuilder.and(condition3, condition4);
+            }
 
         };
     }
@@ -95,37 +103,41 @@ public class PartyBoardSpecification {
     public static Specification<PartyBoard> searchLoadInteger (String sortColumn, String keyword, Integer cursor, boolean isAscending, List<Hobby> hobbyList) {
         return (root, query, criteriaBuilder) -> {
 
-            /* 서브쿼리 세팅 */
-            // 서브쿼리 생성 및 반환 컬럼 자료형 지정
-            Subquery<Integer> subquery = query.subquery(Integer.class);
-
-            // 서브쿼리 FROM절 - FROM PartyBoard 엔티티
-            Root<PartyBoard> subqueryRoot = subquery.from(PartyBoard.class);
-
-            // SELECT :sortColumn FROM PARTY_BOARD WHERE party_board_number = cursor
-            subquery.select(subqueryRoot.get(sortColumn))
-                    .where(criteriaBuilder.equal(subqueryRoot.get("partyBoardNumber"), cursor));
-
-
-            // 조건 1: party_board_open_date </> (서브쿼리 결과)
             Predicate condition1 = null;
-            if (isAscending) {
-                condition1 = criteriaBuilder.greaterThan(root.get(sortColumn), subquery);
-            } else {
-                condition1 = criteriaBuilder.lessThan(root.get(sortColumn), subquery);
-            }
-
-
-            // 조건 2: party_board_open_date = (서브쿼리 결과) AND party_board_number </> cursor
             Predicate condition2 = null;
-            Predicate temp1 = criteriaBuilder.equal(root.get(sortColumn), subquery);
-            Predicate temp2 = null;
-            if(isAscending) {
-                temp2 = criteriaBuilder.greaterThan(root.get("partyBoardNumber"), cursor);
-            } else {
-                temp2 = criteriaBuilder.lessThan(root.get("partyBoardNumber"), cursor);
+            if(cursor != null) {
+
+                /* 서브쿼리 세팅 */
+                // 서브쿼리 생성 및 반환 컬럼 자료형 지정
+                Subquery<Integer> subquery = query.subquery(Integer.class);
+
+                // 서브쿼리 FROM절 - FROM PartyBoard 엔티티
+                Root<PartyBoard> subqueryRoot = subquery.from(PartyBoard.class);
+
+                // SELECT :sortColumn FROM PARTY_BOARD WHERE party_board_number = cursor
+                subquery.select(subqueryRoot.get(sortColumn))
+                        .where(criteriaBuilder.equal(subqueryRoot.get("partyBoardNumber"), cursor));
+
+
+                // 조건 1: party_board_open_date </> (서브쿼리 결과)
+                if (isAscending) {
+                    condition1 = criteriaBuilder.greaterThan(root.get(sortColumn), subquery);
+                } else {
+                    condition1 = criteriaBuilder.lessThan(root.get(sortColumn), subquery);
+                }
+
+
+                // 조건 2: party_board_open_date = (서브쿼리 결과) AND party_board_number </> cursor
+                Predicate temp1 = criteriaBuilder.equal(root.get(sortColumn), subquery);
+                Predicate temp2 = null;
+                if(isAscending) {
+                    temp2 = criteriaBuilder.greaterThan(root.get("partyBoardNumber"), cursor);
+                } else {
+                    temp2 = criteriaBuilder.lessThan(root.get("partyBoardNumber"), cursor);
+                }
+                condition2 = criteriaBuilder.and(temp1, temp2);
+
             }
-            condition2 = criteriaBuilder.and(temp1, temp2);
 
 
             /* 검색어 있을 때 */
@@ -143,11 +155,15 @@ public class PartyBoardSpecification {
             }
 
             // 최종 조건 조합: (조건 1 OR 조건 2) AND 조건 3 AND 조건 4
-            return criteriaBuilder.and(
-                    criteriaBuilder.or(condition1, condition2)
-                    , condition3
-                    , condition4
-            );
+            if(cursor != null) {
+                return criteriaBuilder.and(
+                        criteriaBuilder.or(condition1, condition2)
+                        , condition3
+                        , condition4
+                );
+            } else {
+                return criteriaBuilder.and(condition3, condition4);
+            }
         };
     }
 }

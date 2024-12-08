@@ -14,10 +14,16 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Stream;
 
 @RestController
 public class PartyBoardImageController {
+
+    private final String imgPath = "classpath:static/img";
 
     private final ResourceLoader resourceLoader;
 
@@ -151,6 +157,59 @@ public class PartyBoardImageController {
             }
 
             return ResponseEntity.internalServerError().headers(headers).body(new ResponseMessage(500, "업로드 실패", null));
+        }
+    }
+
+    /* 모임 썸네일 출력 */
+    @GetMapping("/img/partyboard/{partyBoardNumber}/thumbnail/{imageName}")
+    public ResponseEntity<Resource> getPartyBoardImage(
+            @PathVariable Integer partyBoardNumber
+            ,@PathVariable String imageName
+    ) {
+
+        Resource resource = resourceLoader.getResource("classpath:static/img/party_board/" + partyBoardNumber + "/thumbnail/" + imageName);
+
+        if (resource.exists()) {
+            return ResponseEntity.ok().body(resource);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+
+    }
+
+    /* 카테고리 이미지 출력 */
+    @GetMapping("/img/category/{categoryNumber}")
+    public ResponseEntity<?> getCategoryImage(
+            @PathVariable Integer categoryNumber
+    ) {
+
+        Resource resource = resourceLoader.getResource(imgPath + "/category/" + categoryNumber + "/thumbnail/");
+        Resource foundResource = null;
+
+        try {
+
+            if(resource.exists()) {
+                String imageDir = resource.getFile().getAbsolutePath();
+
+                Optional<Path> optionalPath = Files.walk(Paths.get(imageDir))
+                        .filter(Files::isRegularFile)
+                        .findFirst();
+
+                if (optionalPath.isPresent()) {
+                    String foundPath = optionalPath.get().toString();
+                    foundResource = resourceLoader.getResource("file:" + foundPath);
+
+                    return ResponseEntity.ok().body(foundResource);
+                } else {
+                    return ResponseEntity.notFound().build();
+                }
+
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().body(e.getMessage());
         }
     }
 

@@ -1,11 +1,12 @@
 package com.senials.partyboard.controller;
 
 import com.senials.common.ResponseMessage;
+import com.senials.config.HttpHeadersFactory;
+import com.senials.partyboard.dto.PartyBoardDTOForCard;
 import com.senials.partyboard.dto.PartyBoardDTOForDetail;
 import com.senials.partyboard.dto.PartyBoardDTOForModify;
 import com.senials.partyboard.dto.PartyBoardDTOForWrite;
 import com.senials.partyboard.service.PartyBoardService;
-import com.senials.user.dto.UserDTOForPublic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,15 +22,40 @@ import java.util.Map;
 @RestController
 public class PartyBoardController {
 
+
+    private final int userNumber = 3;
     private final PartyBoardService partyBoardService;
+    private final HttpHeadersFactory httpHeadersFactory;
+
 
     @Autowired
     public PartyBoardController(
-            PartyBoardService partyBoardService
-    )
+            PartyBoardService partyBoardService,
+            HttpHeadersFactory httpHeadersFactory)
     {
         this.partyBoardService = partyBoardService;
+        this.httpHeadersFactory = httpHeadersFactory;
     }
+
+
+    /* 인기 추천 모임 (평점 높은 순, 리뷰 개수 minReviewCount개 이상, 모집중 >> size개 제한)*/
+    @GetMapping("/partyboards/popular-parties")
+    public ResponseEntity<ResponseMessage> getPopularPartyBoards(
+            @RequestParam(required = false, defaultValue = "1") Integer minReviewCount
+            , @RequestParam(required = false, defaultValue = "4") Integer size
+            , @RequestParam(required = false, defaultValue = "0") Integer pageNumber
+    ) {
+
+        List<PartyBoardDTOForCard> partyBoardDTOForCardList = partyBoardService.getPopularPartyBoards(minReviewCount, size, pageNumber);
+
+        Map<String, Object> responseMap = new HashMap<>();
+        responseMap.put("popularPartyBoards", partyBoardDTOForCardList);
+
+        HttpHeaders headers = httpHeadersFactory.createJsonHeaders();
+        return ResponseEntity.ok().headers(headers).body(new ResponseMessage(200, "인기 추천 모임 조회 성공", responseMap));
+
+    }
+
 
     // 모임 검색
     // 쿼리스트링
@@ -48,21 +74,41 @@ public class PartyBoardController {
     )
     {
         /* isLikedOnly 유저 세션 검사 필요 */
+        Integer userNumber = 3;
 
-        List<PartyBoardDTOForDetail> partyBoardDTOList = partyBoardService.searchPartyBoard(sortMethod, keyword, cursor, size, isLikedOnly);
+        /* 더보기 버튼 출력 여부 확인 용 데이터 + 1 */
+        List<PartyBoardDTOForCard> partyBoardDTOList = partyBoardService.searchPartyBoard(sortMethod, keyword, cursor, size + 1, isLikedOnly, userNumber);
+
 
         Map<String, Object> responseMap = new HashMap<>();
+
+
+        /* 남은 정보 존재 여부 설정 - 가져온 데이터가 페이지 별 최대 정보 수(size)보다 같거나 작을 경우 false */
+        boolean isRemain = true;
+        if(partyBoardDTOList.size() <= size) {
+            isRemain = false;
+        } else {
+            // 남은 정보 존재 시 마지막 PartyBoard 제거
+            partyBoardDTOList.remove(partyBoardDTOList.size() - 1);
+        }
+        responseMap.put("isRemain", isRemain);
         responseMap.put("partyBoards", partyBoardDTOList);
 
+
+        /* 마지막 PartyBoardNumber */
+        Integer nextCursor = null;
         if (!partyBoardDTOList.isEmpty()) {
-            responseMap.put("cursor", partyBoardDTOList.get(partyBoardDTOList.size() - 1).getPartyBoardNumber());
+            nextCursor = partyBoardDTOList.get(partyBoardDTOList.size() - 1).getPartyBoardNumber();
         }
+        responseMap.put("cursor", nextCursor);
+
 
         // ResponseHeader 설정
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(new MediaType("application", "json", StandardCharsets.UTF_8));
         return ResponseEntity.ok().headers(headers).body(new ResponseMessage(200, "조회 성공", responseMap));
     }
+
 
     // 모임 상세 조회
     @GetMapping("/partyboards/{partyBoardNumber}")

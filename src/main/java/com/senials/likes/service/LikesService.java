@@ -6,6 +6,7 @@ import com.senials.likes.entity.Likes;
 import com.senials.likes.repository.LikeRepository;
 import com.senials.partyboard.dto.PartyBoardDTOForCard;
 import com.senials.partyboard.entity.PartyBoard;
+import com.senials.partyboard.repository.PartyBoardRepository;
 import com.senials.partyreview.entity.PartyReview;
 import com.senials.user.entity.User;
 import com.senials.user.repository.UserRepository;
@@ -21,12 +22,12 @@ import java.util.stream.Collectors;
 public class LikesService {
     private final LikeRepository likesRepository;
     private final UserRepository userRepository;
-    private final PartyBoardMapper partyBoardMapper;
+    private final PartyBoardRepository partyBoardRepository;
 
-    public LikesService(LikeRepository likesRepository, UserRepository userRepository, PartyBoardMapperImpl partyBoardMapper) {
+    public LikesService(LikeRepository likesRepository, UserRepository userRepository, PartyBoardRepository partyBoardRepository) {
         this.likesRepository = likesRepository;
         this.userRepository = userRepository;
-        this.partyBoardMapper = partyBoardMapper;
+        this.partyBoardRepository = partyBoardRepository;
     }
 
     // 좋아요 한 모임 리스트 가져오기
@@ -69,6 +70,7 @@ public class LikesService {
         }).collect(Collectors.toList());
     }
 
+
     /*모임 개수 api*/
     /*사용자 별 좋아요 한 모임 개수*/
     public long countLikesPartyBoardsByUserNumber(int userNumber) {
@@ -76,6 +78,28 @@ public class LikesService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         return likesRepository.countByUser(user);
+    }
+
+
+    /* 좋아요 / 좋아요 취소 */
+    public int toggleLike(int userNumber, int partyBoardNumber) {
+
+        User user = userRepository.findById(userNumber)
+                .orElseThrow(IllegalArgumentException::new);
+
+        PartyBoard partyBoard = partyBoardRepository.findById(partyBoardNumber)
+                .orElseThrow(IllegalArgumentException::new);
+
+        Likes foundLikes = likesRepository.findByUserAndPartyBoard(user, partyBoard);
+
+        if(foundLikes != null) {
+            likesRepository.delete(foundLikes);
+            return 0;
+        } else {
+            Likes newLikes = new Likes(0, user, partyBoard);
+            likesRepository.save(newLikes);
+            return 1;
+        }
     }
 
 }

@@ -1,13 +1,19 @@
 
 
+### 인기 모임 전체 조회
+GET http://localhost:8080/partyboards/popular-parties
+
 ### 모임 검색
-GET http://localhost:8080/partyboards/search
+GET http://localhost:8080/partyboards/search?keyword=workshop&isLikedOnly=true
 
 ###
-GET http://localhost:8080/partyboards/search?cursor=2&sortMethod=oldest
+GET http://localhost:8080/partyboards/search?
+
+###
+GET http://localhost:8080/partyboards/search?sortMethod=oldest&cursor=100
 
 ### 조회순으로 정렬 기준 처음으로 바꿨을 때
-GET http://localhost:8080/partyboards/search?sortMethod=mostViewed
+GET http://localhost:8080/partyboards/search?sortMethod=mostLiked
 
 ### 관심사 Only
 GET http://localhost:8080/partyboards/search?isLikedOnly=true
