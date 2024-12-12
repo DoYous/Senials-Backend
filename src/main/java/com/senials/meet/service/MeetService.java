@@ -5,12 +5,21 @@ import com.senials.common.mapper.MeetMapperImpl;
 import com.senials.meet.dto.MeetDTO;
 import com.senials.meet.entity.Meet;
 import com.senials.meet.repository.MeetRepository;
+import com.senials.meetmember.repository.MeetMemberRepository;
 import com.senials.partyboard.entity.PartyBoard;
 import com.senials.partyboard.repository.PartyBoardRepository;
+import com.senials.partymember.entity.PartyMember;
+import com.senials.partymember.repository.PartyMemberRepository;
+import com.senials.user.entity.User;
+import com.senials.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,29 +31,58 @@ public class MeetService {
     private final PartyBoardRepository partyBoardRepository;
 
     private final MeetRepository meetRepository;
+    private final PartyMemberRepository partyMemberRepository;
+    private final UserRepository userRepository;
+    private final MeetMemberRepository meetMemberRepository;
 
-  
+
     @Autowired
     public MeetService(
             MeetMapperImpl meetMapperImpl
             , PartyBoardRepository partyBoardRepository
-            , MeetRepository meetRepository
-    ) {
+            , MeetRepository meetRepository,
+            PartyMemberRepository partyMemberRepository, UserRepository userRepository, MeetMemberRepository meetMemberRepository) {
         this.meetMapper = meetMapperImpl;
         this.partyBoardRepository = partyBoardRepository;
         this.meetRepository = meetRepository;
+        this.partyMemberRepository = partyMemberRepository;
+        this.userRepository = userRepository;
+        this.meetMemberRepository = meetMemberRepository;
+    }
+
+    /* 모임 내 일정 개수 확인 */
+    public int countMeets(int partyBoardNumber) {
+        return meetRepository.countAllByPartyBoard_PartyBoardNumber(partyBoardNumber);
     }
 
 
     /* 모임 내 일정 전체 조회 */
-    public List<MeetDTO> getMeetsByPartyBoardNumber(int partyBoardNumber) {
+    public List<MeetDTO> getMeetsByPartyBoardNumber(Integer userNumber, int partyBoardNumber, int pageNumber, int pageSize) {
 
         PartyBoard partyBoard = partyBoardRepository.findById(partyBoardNumber)
                 .orElseThrow(IllegalArgumentException::new);
 
-        List<Meet> meetList = meetRepository.findAllByPartyBoardOrderByMeetNumberDesc(partyBoard);
+        Page<Meet> meetList = meetRepository.findAllByPartyBoard(partyBoard, PageRequest.of(pageNumber, pageSize, Sort.by("meetNumber").descending()));
 
-        List<MeetDTO> meetDTOList = meetList.stream().map(meetMapper::toMeetDTO).toList();
+        List<MeetDTO> meetDTOList = meetList.stream().map(meet -> {
+            MeetDTO meetDTO = meetMapper.toMeetDTO(meet);
+            meetDTO.setMeetMemberCnt(meet.getMeetMembers().size());
+
+            return meetDTO;
+        }).collect(Collectors.toList());
+
+        // 로그인 여부 확인
+        if(userNumber != null) {
+            User user = userRepository.findById(userNumber).orElseThrow(RuntimeException::new);
+            PartyMember partyMember = partyMemberRepository.findByPartyBoardAndUser(partyBoard, user);
+
+            // 모임 멤버일 시 일정 별 참여 여부 설정
+            if(partyMember != null) {
+                for (MeetDTO meetDTO : meetDTOList) {
+                    meetDTO.setJoined(meetMemberRepository.existsByMeet_MeetNumberAndPartyMember(meetDTO.getMeetNumber(), partyMember));
+                }
+            }
+        }
 
         return meetDTOList;
     }

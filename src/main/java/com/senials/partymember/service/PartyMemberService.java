@@ -33,6 +33,20 @@ public class PartyMemberService {
         this.userRepository = userRepository;
     }
 
+
+    /* 모임 멤버 랜덤 4명 조회 */
+    public List<UserDTOForPublic> getRandomPartyMembers(int partyBoardNumber) {
+
+        List<PartyMember> partyMemberList = partyMemberRepository.find4ByPartyBoardNumber(partyBoardNumber);
+
+        List<UserDTOForPublic> userDTOList = partyMemberList.stream().map(partyMember -> {
+            return userMapper.toUserDTOForPublic(partyMember.getUser());
+        }).toList();
+
+        return userDTOList;
+    }
+
+
     /* 모임 멤버 전체 조회 */
     public List<UserDTOForPublic> getPartyMembers (int partyBoardNumber) {
 
@@ -52,8 +66,7 @@ public class PartyMemberService {
 
 
     /* 모임 참가 */
-    @Transactional
-    public void registerPartyMember (int userNumber, int partyBoardNumber) {
+    public int registerPartyMember (int userNumber, int partyBoardNumber) {
         User user = userRepository.findById(userNumber)
                 .orElseThrow(IllegalArgumentException::new);
 
@@ -62,13 +75,17 @@ public class PartyMemberService {
 
         PartyMember newMember = new PartyMember(0, partyBoard, user);
 
-        partyBoard.registerPartyMember(newMember);
-
+        // partyBoard.registerPartyMember(newMember);
+        PartyMember savedMember = partyMemberRepository.save(newMember);
+        if(savedMember != null) {
+            return 1;
+        } else {
+            return 0;
+        }
     }
 
 
     /* 모임 탈퇴 */
-    @Transactional
     public void unregisterPartyMember (int userNumber, int partyBoardNumber) {
 
         PartyBoard targetPartyBoard = partyBoardRepository.findById(partyBoardNumber)
@@ -83,5 +100,12 @@ public class PartyMemberService {
 
         partyMemberRepository.delete(targetPartyMember);
 
+    }
+
+
+    /* 모임 멤버 여부 */
+    public boolean checkIsMember (int userNumber, int partyBoardNumber) {
+
+        return partyMemberRepository.existsByUser_UserNumberAndPartyBoard_PartyBoardNumber(userNumber, partyBoardNumber);
     }
 }

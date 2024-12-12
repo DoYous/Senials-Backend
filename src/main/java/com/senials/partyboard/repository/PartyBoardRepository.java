@@ -28,6 +28,12 @@ public interface PartyBoardRepository extends JpaRepository<PartyBoard, Integer>
 
     List<PartyBoard> findByHobby(Hobby hobby);
 
+
+    /* 같은 취미 추천 모임 (상세 페이지 최하단) */
+    @Query(value = "SELECT * FROM PARTY_BOARD WHERE party_board_number != :partyBoardNumber AND hobby_number = (SELECT hobby_number FROM PARTY_BOARD WHERE party_board_number = :partyBoardNumber) ORDER BY RAND() LIMIT 4", nativeQuery = true)
+    public List<PartyBoard> find4ByHobbyOrderByRand(int partyBoardNumber);
+
+
     /* 인기 추천 모임 */
     /* 평점 높은 순, 리뷰 개수 N개 이상, 모집중 >> M개 */
     @Query(value = """

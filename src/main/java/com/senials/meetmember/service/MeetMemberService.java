@@ -13,6 +13,7 @@ import com.senials.user.dto.UserDTOForPublic;
 import com.senials.user.entity.User;
 import com.senials.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -64,22 +65,21 @@ public class MeetMemberService {
     }
 
     /* 모임 일정 참여 */
-    public void joinMeetMembers(Integer userNumber, Integer partyBoardNumber, Integer meetNumber) {
+    public void joinMeetMembers(Integer userNumber, Integer meetNumber) {
 
         User user = userRepository.findById(userNumber)
-                .orElseThrow(() -> new IllegalArgumentException("서버 내부 오류"));
-
+                .orElseThrow(() -> new IllegalArgumentException("서버 오류입니다. (관리자에 문의)"));
 
         /* 일정이 존재하는지 */
         Meet meet = meetRepository.findById(meetNumber)
-                .orElseThrow(() -> new IllegalArgumentException("잘못된 요청 (일정이 존재하지 않음)"));
+                .orElseThrow(() -> new IllegalArgumentException("잘못된 요청입니다. meetNumber"));
 
 
         /* 해당 모임에 가입되어 있는 지 (PathVariable 불필요) */
         PartyBoard partyBoard = meet.getPartyBoard();
         PartyMember partyMember = partyMemberRepository.findByPartyBoardAndUser(partyBoard, user);
         if(partyMember == null) {
-            throw new IllegalArgumentException("잘못된 요청 (모임에 속하지 않음)");
+            throw new IllegalArgumentException("모임에 먼저 참여하셔야 합니다.");
         }
 
 
@@ -87,31 +87,36 @@ public class MeetMemberService {
         LocalDate startDate = meet.getMeetStartDate();
         LocalDate presentDate = LocalDate.now();
         if(presentDate.isAfter(startDate) || presentDate.isEqual(startDate)) {
-            throw new IllegalArgumentException("이미 종료(시작)된 일정");
+            throw new IllegalArgumentException("이미 종료(시작)된 일정입니다.");
         }
 
 
         /* 이미 일정 참여 멤버 인지 (Unique 제약조건으로 곧바로 save 성공 여부로 단축 가능)*/
         MeetMember meetMember = meetMemberRepository.findByMeetAndPartyMember(meet, partyMember);
-
-        if(meetMember == null) {
-            meetMemberRepository.save(new MeetMember(0, meet, partyMember));
-        } else {
-            throw new IllegalArgumentException("잘못된 요청 (이미 참여 중인 멤버)");
+        if(meetMember != null) {
+            throw new IllegalArgumentException("이미 참여중인 일정입니다.");
         }
 
+
+        /* 빈 자리가 없을 때 */
+        if(meet.getMeetMaxMember() <= meet.getMeetMembers().size()) {
+            throw new IllegalArgumentException("이미 모집완료 된 일정입니다.");
+        }
+
+        meetMemberRepository.save(new MeetMember(0, meet, partyMember));
     }
 
+
     /* 모임 일정 탈퇴 */
-    public void quitMeetMembers(Integer userNumber, Integer partyBoardNumber, Integer meetNumber) {
+    public void quitMeetMembers(Integer userNumber, Integer meetNumber) {
 
         User user = userRepository.findById(userNumber)
-                .orElseThrow(() -> new IllegalArgumentException("서버 내부 오류"));
+                .orElseThrow(() -> new IllegalArgumentException("서버 오류입니다. (관리자에 문의)"));
 
 
         /* 일정이 존재하는지 */
         Meet meet = meetRepository.findById(meetNumber)
-                .orElseThrow(() -> new IllegalArgumentException("잘못된 요청 (일정이 존재하지 않음)"));
+                .orElseThrow(() -> new IllegalArgumentException("잘못된 요청입니다. meetNumber"));
 
 
         /* 해당 모임에 가입되어 있는 지 (PathVariable 불필요) */
@@ -126,7 +131,7 @@ public class MeetMemberService {
         MeetMember meetMember = meetMemberRepository.findByMeetAndPartyMember(meet, partyMember);
 
         if(meetMember == null) {
-            throw new IllegalArgumentException("잘못된 요청 (일정 참여 멤버가 아님)");
+            throw new IllegalArgumentException("이미 일정 참여 멤버가 아닙니다.");
         }
 
 
@@ -134,18 +139,18 @@ public class MeetMemberService {
         LocalDate startDate = meet.getMeetStartDate();
         LocalDate deadLine = startDate.minusDays(2);
         LocalDate presentDate = LocalDate.now();
-        if(presentDate.isAfter(deadLine) || presentDate.isEqual(deadLine)) {
+        if(presentDate.isAfter(startDate) || presentDate.isEqual(startDate)) {
 
-            throw new IllegalArgumentException("일정 시작일로부터 최소 이틀 전 탈퇴 가능 (모임장에 문의)");
+            throw new IllegalArgumentException("이미 종료(시작)된 일정입니다.");
 
-        }else if(presentDate.isAfter(startDate) || presentDate.isEqual(startDate)) {
+        }else if(presentDate.isAfter(deadLine) || presentDate.isEqual(deadLine)) {
 
-            throw new IllegalArgumentException("이미 종료(시작)된 일정");
+            throw new IllegalArgumentException("일정 시작일로부터 최소 이틀 전까지 탈퇴 가능합니다. (모임장에 문의)");
 
         }
 
-
-        meetMemberRepository.delete(meetMember);
+            meetMemberRepository.delete(meetMember);
 
     }
+
 }

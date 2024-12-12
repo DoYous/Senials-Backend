@@ -32,7 +32,13 @@ public interface LikeRepository extends JpaRepository<Likes, Integer> {
     /* 특정 user가 partyBoard를 좋아요 했는지 */
     boolean existsByUserAndPartyBoard(User user, PartyBoard partyBoard);
 
+    /* 특정 user가 partyBoard를 좋아요 했는지 */
+    boolean existsByUser_UserNumberAndPartyBoard_PartyBoardNumber(int userNumber, int partyBoardNumber);
+
     /* user가 partyBoard 좋아요 한 정보 : 좋아요 취소 용 */
     Likes findByUserAndPartyBoard(User user, PartyBoard partyBoard);
+
+    /* user가 partyBoard 좋아요 한 정보 : 좋아요 취소 용 */
+    Likes findByUser_UserNumberAndPartyBoard_PartyBoardNumber(int userNumber, int partyBoardNumber);
 
 }

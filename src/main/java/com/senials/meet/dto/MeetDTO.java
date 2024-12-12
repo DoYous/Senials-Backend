@@ -1,9 +1,6 @@
 package com.senials.meet.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -32,8 +29,14 @@ public class MeetDTO {
 
     private int meetMaxMember;
 
+    // 모임 참여 여부
+    private boolean isJoined;
+
+    // 모임 멤버 수
+    private int meetMemberCnt;
 
     /* AllArgsConstructor */
+    @Builder
     public MeetDTO(int meetNumber, int partyBoardNumber, LocalDate meetStartDate, LocalDate meetEndDate, LocalTime meetStartTime, LocalTime meetFinishTime, int meetEntryFee, String meetLocation, int meetMaxMember) {
         this.meetNumber = meetNumber;
         this.partyBoardNumber = partyBoardNumber;

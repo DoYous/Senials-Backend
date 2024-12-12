@@ -1,10 +1,7 @@
 package com.senials.partyboard.dto;
 
 import com.senials.partyboardimage.dto.PartyBoardImageDTO;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -33,13 +30,20 @@ public class PartyBoardDTOForDetail {
 
     private int partyBoardLikeCnt;
 
+    private int partyBoardReportCnt;
+
+    // 이미지 명
     private List<PartyBoardImageDTO> images;
 
-    // 신고 수 안보냄
-    // private int partyBoardReportCnt;
+    // 카테고리 명
+    private String categoryName;
+
+    // 멤버 수
+    private int partyMemberCnt;
 
     /* AllArgsConstructor */
-    public PartyBoardDTOForDetail(int partyBoardNumber, int userNumber, int hobbyNumber, String partyBoardName, String partyBoardDetail, LocalDate partyBoardOpenDate, int partyBoardStatus, int partyBoardViewCnt, int partyBoardLikeCnt) {
+    @Builder
+    public PartyBoardDTOForDetail(int partyBoardNumber, int userNumber, int hobbyNumber, String partyBoardName, String partyBoardDetail, LocalDate partyBoardOpenDate, int partyBoardStatus, int partyBoardViewCnt, int partyBoardLikeCnt, int partyBoardReportCnt, List<PartyBoardImageDTO> images, String categoryName, int partyMemberCnt) {
         this.partyBoardNumber = partyBoardNumber;
         this.userNumber = userNumber;
         this.hobbyNumber = hobbyNumber;
@@ -49,5 +53,9 @@ public class PartyBoardDTOForDetail {
         this.partyBoardStatus = partyBoardStatus;
         this.partyBoardViewCnt = partyBoardViewCnt;
         this.partyBoardLikeCnt = partyBoardLikeCnt;
+        this.partyBoardReportCnt = partyBoardReportCnt;
+        this.images = images;
+        this.categoryName = categoryName;
+        this.partyMemberCnt = partyMemberCnt;
     }
 }

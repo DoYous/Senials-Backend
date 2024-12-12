@@ -2,9 +2,9 @@
 GET https://examples.http-client.intellij.net/get
     ?generated-in=IntelliJ IDEA
 
-###
-POST http://localhost:8080/partyboards/1/meets/5/meetmembers
+### 일정 참여
+POST http://localhost:8080/meets/500/meetmembers
 
 
-###
-DELETE http://localhost:8080/partyboards/1/meets/5/meetmembers
+### 일정 참여 취소
+DELETE http://localhost:8080/meets/1/meetmembers

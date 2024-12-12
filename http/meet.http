@@ -4,7 +4,7 @@ GET https://examples.http-client.intellij.net/get
 
 
 ### 모임 내 일정 전체 조회
-GET http://localhost:8080/partyboards/1/meets
+GET http://localhost:8080/partyboards/1/meets?pageNumber=1
 
 ### 모임 일정 추가
 POST http://localhost:8080/partyboards/2/meets

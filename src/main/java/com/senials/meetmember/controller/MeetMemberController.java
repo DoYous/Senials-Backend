@@ -20,6 +20,7 @@ import java.util.Map;
 @RestController
 public class MeetMemberController {
 
+    private final Integer loggedInUserNumber = 3;
     private final HttpHeadersFactory httpHeadersFactory;
     private final UserMapper userMapper;
     private final MeetRepository meetRepository;
@@ -57,32 +58,27 @@ public class MeetMemberController {
     }
 
     /* 모임 일정 참여 */
-    @PostMapping("/partyboards/{partyBoardNumber}/meets/{meetNumber}/meetmembers")
+    @PostMapping("/meets/{meetNumber}/meetmembers")
     public ResponseEntity<ResponseMessage> joinMeetMembers(
-            @PathVariable Integer partyBoardNumber
-            , @PathVariable Integer meetNumber
+            @PathVariable Integer meetNumber
     ) {
         /* 유저 임의 정의 */
         // 유저 로그인 확인 필요
-        int userNumber = 4;
-
-        meetMemberService.joinMeetMembers(userNumber, partyBoardNumber, meetNumber);
+        meetMemberService.joinMeetMembers(loggedInUserNumber, meetNumber);
 
         HttpHeaders headers = httpHeadersFactory.createJsonHeaders();
         return ResponseEntity.ok().headers(headers).body(new ResponseMessage(200, "일정 참여 성공", null));
     }
 
+
     /* 모임 일정 탈퇴 */
-    @DeleteMapping("/partyboards/{partyBoardNumber}/meets/{meetNumber}/meetmembers")
+    @DeleteMapping("/meets/{meetNumber}/meetmembers")
     public ResponseEntity<ResponseMessage> quitMeetMembers(
-            @PathVariable Integer partyBoardNumber
-            , @PathVariable Integer meetNumber
+            @PathVariable Integer meetNumber
     ) {
         /* 유저 임의 정의 */
         // 유저 로그인 확인 필요
-        int userNumber = 4;
-
-        meetMemberService.quitMeetMembers(userNumber, partyBoardNumber, meetNumber);
+        meetMemberService.quitMeetMembers(loggedInUserNumber, meetNumber);
 
         HttpHeaders headers = httpHeadersFactory.createJsonHeaders();
         return ResponseEntity.ok().headers(headers).body(new ResponseMessage(200, "일정 탈퇴 성공", null));

@@ -5,10 +5,13 @@ import com.senials.common.mapper.PartyReviewMapperImpl;
 import com.senials.partyboard.entity.PartyBoard;
 import com.senials.partyboard.repository.PartyBoardRepository;
 import com.senials.partyreview.dto.PartyReviewDTO;
+import com.senials.partyreview.dto.PartyReviewDTOForDetail;
 import com.senials.partyreview.entity.PartyReview;
 import com.senials.partyreview.repository.PartyReviewRepository;
 import com.senials.user.entity.User;
 import com.senials.user.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,17 +43,43 @@ public class PartyReviewService {
     }
 
 
+    /* 개인 모임 후기 단일 조회 */
+    public PartyReviewDTOForDetail getOnePartyReview(int userNumber, int partyBoardNumber) {
+
+        PartyReview partyReview = partyReviewRepository.findByUser_UserNumberAndPartyBoard_PartyBoardNumber(userNumber, partyBoardNumber);
+
+        if(partyReview != null) {
+            return partyReviewMapper.toPartyReviewDTOForDetail(partyReview);
+        } else {
+            return null;
+        }
+    }
+
+
+    /* 모임 후기 전체 수 */
+    public int countPartyReviews(int partyBoardNumber) {
+
+        return partyReviewRepository.countAllByPartyBoard_PartyBoardNumber(partyBoardNumber);
+    }
+
+    /* 모임 후기 평점 */
+    public double getAverageReviewRate(int partyBoardNumber) {
+
+        return partyReviewRepository.findAvgRateByPartyBoard_PartyBoardNumber(partyBoardNumber);
+    }
+
+
     /* 모임 후기 전체 조회 */
-    public List<PartyReviewDTO> getPartyReviewsByPartyBoardNumber(int partyBoardNumber) {
+    public List<PartyReviewDTOForDetail> getPartyReviews(int partyBoardNumber, Pageable pageable) {
 
         PartyBoard partyBoard = partyBoardRepository.findById(partyBoardNumber)
-                .orElseThrow(IllegalArgumentException::new);
+                .orElseThrow(() -> new IllegalArgumentException("잘못된 요청입니다."));
 
         /* 모임 번호에 해당하는 모임 후기 리스트 도출 */
-        List<PartyReview> partyReviewList = partyReviewRepository.findAllByPartyBoardOrderByPartyReviewWriteDateDesc(partyBoard);
+        Page<PartyReview> partyReviewList = partyReviewRepository.findAllByPartyBoard(partyBoard, pageable);
 
-        List<PartyReviewDTO> partyReviewDTOList = partyReviewList.stream()
-                .map(partyReviewMapper::toPartyReviewDTO)
+        List<PartyReviewDTOForDetail> partyReviewDTOList = partyReviewList.stream()
+                .map(partyReviewMapper::toPartyReviewDTOForDetail)
                 .toList();
 
         return partyReviewDTOList;

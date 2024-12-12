@@ -2,7 +2,11 @@ package com.senials.partyreview.controller;
 
 import com.senials.common.ResponseMessage;
 import com.senials.partyreview.dto.PartyReviewDTO;
+import com.senials.partyreview.dto.PartyReviewDTOForDetail;
 import com.senials.partyreview.service.PartyReviewService;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,22 +20,38 @@ import java.util.Map;
 @RestController
 public class PartyReviewController {
 
-
+    private Integer loggedInUserNumber = 3;
     private final PartyReviewService partyReviewService;
 
     public PartyReviewController(PartyReviewService partyReviewService) {
         this.partyReviewService = partyReviewService;
     }
 
+    // /* 모임 후기 조회 - 로그인 유저 */
+    // @GetMapping()
+
+
     /* 모임 후기 전체 조회*/
     @GetMapping("/partyboards/{partyBoardNumber}/partyreviews")
     public ResponseEntity<ResponseMessage> getPartyReviewsByPartyBoardNumber(
             @PathVariable Integer partyBoardNumber
+            , @RequestParam(required = false, defaultValue = "4") Integer pageSize
+            , @RequestParam(required = false, defaultValue = "0") Integer pageNumber
     ) {
-        List<PartyReviewDTO> partyReviewDTOList = partyReviewService.getPartyReviewsByPartyBoardNumber(partyBoardNumber);
+
+        int partyReviewCnt = partyReviewService.countPartyReviews(partyBoardNumber);
+        double partyAvgReviewRate = partyReviewService.getAverageReviewRate(partyBoardNumber);
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by("partyReviewWriteDate").descending());
+        List<PartyReviewDTOForDetail> partyReviewDTOList = partyReviewService.getPartyReviews(partyBoardNumber, pageable);
+
+        boolean hasMoreReviews = (pageNumber + 1) * pageSize < partyReviewCnt;
 
         Map<String, Object> responseMap = new HashMap<>();
+        responseMap.put("partyReviewCnt", partyReviewCnt);
+        responseMap.put("partyAvgReviewRate", partyAvgReviewRate);
         responseMap.put("partyReviews", partyReviewDTOList);
+        responseMap.put("hasMoreReviews", hasMoreReviews);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(new MediaType("application", "json", StandardCharsets.UTF_8));

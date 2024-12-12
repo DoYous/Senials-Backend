@@ -102,4 +102,9 @@ public class LikesService {
         }
     }
 
+    // 특정 모임 좋아요 체크
+    public boolean isLikedByPartyBoardNumber(int userNumber, int partyBoardNumber) {
+
+        return likesRepository.existsByUser_UserNumberAndPartyBoard_PartyBoardNumber(userNumber, partyBoardNumber);
+    }
 }

@@ -9,6 +9,7 @@ import com.senials.partymember.repository.PartyMemberRepository;
 import com.senials.partyreview.entity.PartyReview;
 import com.senials.user.dto.UserCommonDTO;
 import com.senials.user.dto.UserDTO;
+import com.senials.user.dto.UserDTOForPublic;
 import com.senials.user.entity.User;
 import com.senials.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -62,6 +63,15 @@ public class UserService {
                         /*, user.getUserProfileImg()*/
                 ))
                 .orElseThrow(IllegalArgumentException::new);
+    }
+
+
+    // 특정 사용자 조회 (UserDTOForPublic)
+    public UserDTOForPublic getUserPublicByNumber(int userNumber) {
+        User user = userRepository.findById(userNumber)
+                .orElseThrow(IllegalArgumentException::new);
+
+        return userMapper.toUserDTOForPublic(user);
     }
 
 

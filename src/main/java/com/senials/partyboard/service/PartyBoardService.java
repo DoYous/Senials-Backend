@@ -87,6 +87,26 @@ public class PartyBoardService {
         this.partyBoardImageRepository = partyBoardImageRepository;
     }
 
+    /* 같은 취미 추천 모임 (상세 페이지 최하단) */
+    public List<PartyBoardDTOForCard> getRecommendedPartyBoards(Integer userNumber, int partyBoardNumber) {
+        User user;
+        if(userNumber != null) {
+            user = userRepository.findById(userNumber).orElseThrow(IllegalArgumentException::new);
+        } else {
+            user = null;
+        }
+
+        List<PartyBoard> partyBoardList = partyBoardRepository.find4ByHobbyOrderByRand(partyBoardNumber);
+
+        List<PartyBoardDTOForCard> partyBoardDTOList = partyBoardList.stream().map(partyBoard -> {
+            boolean isLiked = user != null && likeRepository.existsByUserAndPartyBoard(user, partyBoard);
+            PartyBoardDTOForCard partyBoardDTO = partyBoardMapper.toPartyBoardDTOForCard(partyBoard);
+            partyBoardDTO.setLiked(isLiked);
+            return partyBoardDTO;
+        }).toList();
+        return partyBoardDTOList;
+    }
+
     /* 인기 추천 모임 (평점 높은 순, 리뷰 개수 N개 이상, 모집중 >> M개 제한)*/
     public List<PartyBoardDTOForCard> getPopularPartyBoards(int minReviewCount, int size, int pageNumber) {
 
@@ -239,9 +259,16 @@ public class PartyBoardService {
 
         PartyBoard partyBoard = partyBoardRepository.findByPartyBoardNumber(partyBoardNumber);
 
+        if(partyBoard == null) {
+            throw new RuntimeException("[Error] 잘못된 모임 번호 요청");
+        }
+
         PartyBoardDTOForDetail partyBoardDTO = partyBoardMapper.toPartyBoardDTOForDetail(partyBoard);
         partyBoardDTO.setUserNumber(partyBoard.getUser().getUserNumber());
+        partyBoardDTO.setHobbyNumber(partyBoard.getHobby().getHobbyNumber());
+        partyBoardDTO.setCategoryName(partyBoard.getHobby().getCategory().getCategoryName());
         partyBoardDTO.setImages(partyBoard.getImages().stream().map(partyBoardMapper::toPartyBoardImageDTO).toList());
+        partyBoardDTO.setPartyMemberCnt(partyBoard.getPartyMembers().size());
 
         return partyBoardDTO;
     }
